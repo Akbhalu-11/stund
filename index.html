@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Virtual Lab - 14 Experiments</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --grid-color: #334155;
+            --input-bg: rgba(15, 23, 42, 0.5);
+            --card-hover: rgba(56, 189, 248, 0.2);
+        }
+
+        .light-mode {
+            --bg-color: #f1f5f9;
+            --text-color: #0f172a;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --grid-color: #cbd5e1;
+            --input-bg: rgba(255, 255, 255, 0.9);
+            --card-hover: rgba(56, 189, 248, 0.1);
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .screen {
+            display: none;
+            height: 100vh;
+            width: 100vw;
+            background: linear-gradient(135deg, var(--bg-color) 0%, #1e293b 100%);
+        }
+        .light-mode .screen {
+            background: linear-gradient(135deg, var(--bg-color) 0%, #e2e8f0 100%);
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Workspace Grid */
+        .workspace-grid {
+            background-image: radial-gradient(var(--grid-color) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* Input Styling */
+        input[type="text"], input[type="password"], input[type="number"] {
+            background: var(--input-bg) !important;
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 6rem;
+            z-index: 100;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            border-color: #38bdf8;
+        }
+
+        .terminal-btn {
+            pointer-events: auto !important;
+        }
+        .terminal-btn:hover {
+            box-shadow: 0 0 15px #38bdf8;
+        }
+
+        /* Custom Instrument Styles */
+        .instrument-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: grab;
+        }
+        .instrument-card:hover {
+            transform: translateY(-5px);
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+        }
+
+        .placed-instrument {
+            position: absolute;
+            z-index: 10;
+            cursor: move;
+            user-select: none;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .placed-instrument:hover .delete-btn {
+            opacity: 1;
+        }
+
+        /* Animation for Glowing */
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px #fbbf24; }
+            50% { box-shadow: 0 0 20px #fbbf24; }
+            100% { box-shadow: 0 0 5px #fbbf24; }
+        }
+        .glowing {
+            animation: glow 1.5s infinite;
+        }
+
+        /* Subtle Background Animation */
+        @keyframes mesh {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .animated-bg {
+            background-size: 200% 200% !important;
+            animation: mesh 15s ease infinite;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <button onclick="toggleTheme()" class="theme-toggle" title="Switch Theme">
+        <i id="theme-icon" data-lucide="sun" class="w-5 h-5 text-amber-400"></i>
+    </button>
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="login-screen" class="screen active flex-col items-center justify-center bg-[url('https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center animated-bg">
+        <div class="absolute inset-0 bg-slate-950/80 light-mode-overlay"></div>
+        <style>
+            .light-mode .light-mode-overlay {
+                background-color: rgba(241, 245, 249, 0.85);
+            }
+        </style>
+        <div class="glass-panel z-10 p-10 rounded-2xl w-full max-w-md text-center">
+            <h1 onclick="debugAdminLogin()" class="text-4xl font-bold mb-2 text-sky-400 cursor-pointer hover:scale-105 transition-all" title="Click for Master Access">Virtual Lab</h1>
+            <p class="text-slate-400 mb-8 text-sm uppercase tracking-widest">Physics Portal</p>
+            
+            <div class="flex gap-4 mb-8">
+                <button onclick="setRole('student', true)" id="role-student" class="flex-1 py-4 rounded-xl border-2 border-sky-500 bg-sky-500/10 transition-all">
+                    <i data-lucide="graduation-cap" class="mx-auto mb-2"></i>
+                    <span>Student</span>
+                </button>
+                <button onclick="setRole('teacher', true)" id="role-teacher" class="flex-1 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:bg-slate-700 transition-all">
+                    <i data-lucide="briefcase" class="mx-auto mb-2"></i>
+                    <span>Teacher</span>
+                </button>
+                <button onclick="setRole('admin', true)" id="role-admin" class="flex-1 py-4 rounded-xl border-2 border-slate-700 bg-slate-800/50 hover:bg-slate-700 transition-all">
+                    <i data-lucide="shield-check" class="mx-auto mb-2"></i>
+                    <span>Admin</span>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <input type="text" id="login-id" placeholder="Username / ID" onkeypress="handleEnter(event)" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-sky-500 transition-all">
+                <input type="password" id="login-pass" placeholder="Password" onkeypress="handleEnter(event)" class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 focus:outline-none focus:border-sky-500 transition-all">
+                <p id="login-error" class="text-xs text-red-500 hidden italic">Invalid credentials. Please try again.</p>
+                <button onclick="handleLogin()" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 rounded-lg transition-all transform active:scale-95">
+                    Continue to Lab
+                </button>
+                <div class="relative py-2">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-slate-900 px-2 text-slate-500 italic">Quick Access</span></div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="guestLogin()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-sm transition-all border border-slate-700">
+                        Guest
+                    </button>
+                    <button onclick="skipLogin()" class="flex-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 py-2 rounded-lg text-sm transition-all border border-sky-500/50 font-bold">
+                        Skip Login
+                    </button>
+                </div>
+                <div class="mt-4 text-[10px] text-slate-500 text-left bg-slate-900/30 p-2 rounded border border-slate-800">
+                    <p><strong>Demo Admin:</strong> admin / admin123</p>
+                    <p><strong>Demo Student:</strong> S101 / 123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. EXPERIMENT SELECTION SCREEN -->
+    <div id="selection-screen" class="screen flex-col p-8 overflow-y-auto">
+        <div class="max-w-6xl mx-auto w-full">
+            <header class="flex justify-between items-center mb-10">
+                <div>
+                    <h2 class="text-3xl font-bold text-sky-400">Select Experiment</h2>
+                    <p class="text-slate-400">Choose from 14 curriculum-based experiments</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="showScreen('login-screen')" class="flex items-center gap-2 text-slate-400 hover:text-white transition-all">
+                        <i data-lucide="arrow-left" class="w-4"></i> Back
+                    </button>
+                    <button onclick="showScreen('login-screen')" class="flex items-center gap-2 text-slate-400 hover:text-red-400 transition-all border-l border-slate-700 pl-4">
+                        <i data-lucide="log-out" class="w-4"></i> Logout
+                    </button>
+                </div>
+            </header>
+
+            <div id="exp-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Experiment cards will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. EXPERIMENT INTRODUCTION SCREEN -->
+    <div id="intro-screen" class="screen flex-col items-center justify-center p-8 bg-slate-950">
+        <!-- Injected dynamically -->
+    </div>
+
+    <!-- 4. LAB WORKSPACE -->
+    <div id="lab-screen" class="screen flex h-full">
+        <!-- Sidebar Toolkit -->
+        <div class="w-72 glass-panel border-r border-slate-800 flex flex-col p-4">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
+                    <i data-lucide="flask-conical" class="text-white"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm">Lab Toolkit</h3>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest">Instruments</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 overflow-y-auto pr-2" id="toolkit-items">
+                <!-- Tool items will be injected here -->
+            </div>
+
+            <div class="mt-auto pt-4 border-t border-slate-700">
+                <button onclick="showScreen('selection-screen')" class="w-full p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs flex items-center justify-center gap-2">
+                    <i data-lucide="chevron-left" class="w-4"></i> Back to Menu
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Workspace -->
+        <div class="flex-1 flex flex-col relative">
+            <div class="h-16 glass-panel border-b border-slate-800 flex items-center justify-between px-6 z-20">
+                <div class="flex items-center gap-4">
+                    <button onclick="showScreen('selection-screen')" class="text-slate-400 hover:text-white mr-2 transition-all" title="Back to Menu">
+                        <i data-lucide="arrow-left" class="w-5"></i>
+                    </button>
+                    <span class="px-3 py-1 bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-bold rounded-full">LIVE EXPERIMENT</span>
+                    <h2 class="font-bold">Experiment</h2>
+                    <div id="wiring-toast" class="hidden px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-500 text-[9px] font-bold rounded animate-pulse">
+                        WIRING MODE: CLICK ANOTHER TERMINAL
+                    </div>
+                </div>
+                <!-- Step Indicator -->
+                <div id="step-guide" class="bg-sky-500/20 border border-sky-500/30 px-4 py-2 rounded-lg text-xs font-bold text-sky-400 animate-pulse">
+                    Assemble the circuit...
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="text-right">
+                        <p class="text-[10px] text-slate-400 uppercase">Circuit Status</p>
+                        <p id="circuit-status" class="text-xs font-bold text-red-400">Incomplete</p>
+                    </div>
+                    <button onclick="resetCircuit()" class="p-2 bg-slate-800 rounded-lg hover:bg-slate-700">
+                        <i data-lucide="refresh-cw" class="w-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 relative workspace-grid" id="drop-zone" ondrop="drop(event)" ondragover="allowDrop(event)">
+                <!-- SVG Layer for Wires -->
+                <svg id="wires-layer" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
+                <!-- Placed components will appear here -->
+                
+                <!-- Calculation Table Overlay (Side Panel) -->
+                <div class="absolute top-4 right-4 w-80 glass-panel rounded-2xl p-4 shadow-2xl z-30">
+                    <h4 class="text-xs font-bold text-sky-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="table" class="w-3"></i> Observation Table
+                    </h4>
+                    <table class="w-full text-[11px]">
+                        <thead>
+                            <tr class="text-slate-400 border-b border-slate-700">
+                                <th class="pb-2 text-left">Volt (V)</th>
+                                <th class="pb-2 text-left">mA</th>
+                                <th class="pb-2 text-left">R = V/I (Ω)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="observation-rows" class="text-slate-200">
+                            <tr class="border-b border-slate-800/50">
+                                <td class="py-2">---</td>
+                                <td class="py-2">---</td>
+                                <td class="py-2 font-bold text-sky-400">---</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="mt-4 p-3 bg-sky-500/5 border border-sky-500/10 rounded-lg">
+                        <div class="flex justify-between text-[10px] mb-1">
+                            <span class="text-slate-400">Current (I):</span>
+                            <span id="current-converted" class="font-mono">0.000 A</span>
+                        </div>
+                        <div class="flex justify-between text-xs font-bold">
+                            <span class="text-slate-400">Resistance (R):</span>
+                            <span id="resistance-result" class="text-sky-400">0.00 Ω</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. ADMIN DASHBOARD SCREEN -->
+    <div id="admin-screen" class="screen flex-col p-8 overflow-y-auto">
+        <div class="max-w-6xl mx-auto w-full">
+            <header class="flex justify-between items-center mb-10">
+                <div>
+                    <h2 class="text-3xl font-bold text-sky-400">Admin Control Center</h2>
+                    <p class="text-slate-400">Manage experiments, student progress, and lab settings</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="showScreen('login-screen')" class="flex items-center gap-2 text-slate-400 hover:text-white transition-all">
+                        <i data-lucide="arrow-left" class="w-4"></i> Back
+                    </button>
+                    <button onclick="showScreen('login-screen')" class="flex items-center gap-2 text-slate-400 hover:text-red-400 transition-all border-l border-slate-700 pl-4">
+                        <i data-lucide="log-out" class="w-4"></i> Logout
+                    </button>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-sky-500">
+                    <p class="text-slate-400 text-xs uppercase font-bold mb-1">Total Experiments</p>
+                    <h3 class="text-3xl font-bold">14</h3>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-emerald-500">
+                    <p class="text-slate-400 text-xs uppercase font-bold mb-1">Active Users</p>
+                    <h3 id="active-users-count" class="text-3xl font-bold">2</h3>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-amber-500">
+                    <p class="text-slate-400 text-xs uppercase font-bold mb-1">Total Reports</p>
+                    <h3 class="text-3xl font-bold">0</h3>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-purple-500">
+                    <p class="text-slate-400 text-xs uppercase font-bold mb-1">Lab Uptime</p>
+                    <h3 class="text-3xl font-bold">99.9%</h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-8">
+                <div class="glass-panel p-6 rounded-2xl overflow-hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h4 class="font-bold flex items-center gap-2 text-sky-400 text-xl">
+                            <i data-lucide="users" class="w-6 h-6"></i> User Database & Permissions
+                        </h4>
+                        <div class="flex gap-2">
+                            <input type="text" placeholder="Search user ID..." class="bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-1 text-xs focus:outline-none focus:border-sky-500">
+                            <button class="bg-sky-500 text-white px-4 py-1 rounded-lg text-xs font-bold hover:bg-sky-600 transition-all">Add User</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-slate-400 text-[10px] uppercase tracking-widest border-b border-slate-800">
+                                    <th class="pb-4 font-medium">User Details</th>
+                                    <th class="pb-4 font-medium">Role</th>
+                                    <th class="pb-4 font-medium">Last Login</th>
+                                    <th class="pb-4 font-medium">Exps</th>
+                                    <th class="pb-4 font-medium">Status</th>
+                                    <th class="pb-4 font-medium text-right">Login Permission</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-user-list" class="text-sm">
+                                <!-- User list injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- APP STATE ---
+        let currentRole = 'student';
+        let placedComponents = [];
+        let wires = []; 
+        let wiringMode = { active: false, from: null };
+        let observationData = [];
+        let currentStep = 1;
+        let currentExperiment = null;
+
+        let users = [
+            { id: 'S101', name: 'Ayush Student', role: 'student', status: 'active', pass: '123', lastLogin: '2026-02-24', experiments: 5 },
+            { id: 'S102', name: 'Rahul Kumar', role: 'student', status: 'active', pass: '123', lastLogin: '2026-02-23', experiments: 2 },
+            { id: 'T202', name: 'Sharma Teacher', role: 'teacher', status: 'active', pass: 'teacher123', lastLogin: '2026-02-24', experiments: 0 },
+            { id: 'S103', name: 'Priya Singh', role: 'student', status: 'inactive', pass: '123', lastLogin: '2026-02-20', experiments: 12 }
+        ];
+
+        let circuitState = {
+            v: 0,
+            v_battery: 10,
+            r: 16.67,
+            isComplete: false,
+            hasBattery: false,
+            hasAmmeter: false,
+            hasVoltmeter: false,
+            hasResistor: false,
+            hasRheostat: false,
+            hasKey: false,
+            isClosed: false,
+            rheostatValue: 800
+        };
+
+        const experiments = [
+            { 
+                id: 1, title: "Ohm's Law", desc: "V = IR Verification", icon: "zap",
+                obj: "To verify Ohm's law by studying the relationship between potential difference (V) and current (I).",
+                app: ["Battery Eliminator (0-10V)", "Ammeter (0-500mA)", "Voltmeter (0-3V)", "Rheostat (800-1000Ω)", "Wooden Board Resistor", "Plug Key"],
+                tools: ['battery', 'key', 'rheostat', 'resistor', 'ammeter', 'voltmeter'],
+                steps: [
+                    { id: 'battery', guide: "Step 1: Place the Battery Eliminator (10V Max)" },
+                    { id: 'key', guide: "Step 2: Connect the Plug Key" },
+                    { id: 'rheostat', guide: "Step 3: Connect the Rheostat (800-1000Ω)" },
+                    { id: 'resistor', guide: "Step 4: Place the Resistor board" },
+                    { id: 'ammeter', guide: "Step 5: Connect Ammeter in Series" },
+                    { id: 'voltmeter', guide: "Step 6: Connect Voltmeter in Parallel" },
+                    { id: 'done', guide: "Circuit Complete! Use +/- on Rheostat for 0.5V steps." }
+                ]
+            },
+            { id: 2, title: "Series Resistance", desc: "R1 + R2 Verification", icon: "activity", obj: "To verify laws of series combination.", tools: ['battery', 'key', 'resistor', 'resistor', 'ammeter', 'voltmeter'], steps: [{id:'battery', guide:'Place Battery'}, {id:'done', guide:'Ready'}] },
+            { id: 3, title: "Parallel Resistance", desc: "1/R1 + 1/R2 Verification", icon: "git-branch", obj: "To verify laws of parallel combination.", tools: ['battery', 'key', 'resistor', 'resistor', 'ammeter', 'voltmeter'], steps: [{id:'battery', guide:'Place Battery'}, {id:'done', guide:'Ready'}] },
+            { id: 4, title: "Meter Bridge", desc: "Unknown Resistance", icon: "ruler", tools: ['battery', 'key', 'resistor'] },
+            { id: 5, title: "Specific Resistance", desc: "Resistivity of wire", icon: "cog", tools: ['battery', 'key', 'resistor'] },
+            { id: 6, title: "Potentiometer", desc: "Internal Resistance", icon: "battery-charging", tools: ['battery', 'key', 'rheostat'] },
+            { id: 7, title: "Leclanche Cell", desc: "Internal Resistance", icon: "battery", tools: ['battery', 'key', 'resistor'] },
+            { id: 8, title: "Combination Laws", desc: "Verification of laws", icon: "layout", tools: ['battery', 'key', 'resistor'] },
+            { id: 9, title: "Ammeter Conversion", desc: "Galv to Ammeter", icon: "gauge", tools: ['battery', 'key', 'ammeter'] },
+            { id: 10, title: "Voltmeter Conversion", desc: "Galv to Voltmeter", icon: "cpu", tools: ['battery', 'key', 'voltmeter'] },
+            { id: 11, title: "Zener Diode", desc: "V-I Characteristics", icon: "binary", tools: ['battery', 'key', 'voltmeter', 'ammeter'] },
+            { id: 12, title: "P-N Junction", desc: "Forward & Reverse Bias", icon: "layers", tools: ['battery', 'key', 'voltmeter', 'ammeter'] },
+            { id: 13, title: "Transistor", desc: "CE Characteristics", icon: "microchip", tools: ['battery', 'key', 'voltmeter', 'ammeter'] },
+            { id: 14, title: "Logic Gates", desc: "AND, OR, NOT verification", icon: "circuit-board", tools: ['battery', 'key', 'resistor'] }
+        ];
+
+        const toolkit = [
+            { id: 'battery', name: 'Battery (BKRI)', icon: 'battery', desc: '0-10V Source' },
+            { id: 'key', name: 'Plug Key', icon: 'key', desc: 'Switch' },
+            { id: 'rheostat', name: 'Rheostat', icon: 'sliders', desc: '800-1000Ω' },
+            { id: 'resistor', name: 'Wooden Resistor', icon: 'box', desc: 'Standard Load' },
+            { id: 'ammeter', name: 'Ammeter (500mA)', icon: 'gauge', desc: 'Series Measure' },
+            { id: 'voltmeter', name: 'Voltmeter (3V)', icon: 'plug-2', desc: 'Parallel Measure' }
+        ];
+
+        // --- NAVIGATION & AUTH ---
+        function showScreen(screenId, expId = null) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(screenId);
+            if (target) {
+                target.classList.add('active');
+            } else {
+                console.error(`Screen ${screenId} not found`);
+                document.getElementById('login-screen').classList.add('active');
+            }
+            if (expId) {
+                currentExperiment = experiments.find(e => e.id === parseInt(expId));
+                loadExperimentIntro();
+            }
+        }
+
+        function setRole(role, clearInputs = false) {
+            currentRole = role;
+            ['student', 'teacher', 'admin'].forEach(r => {
+                const btn = document.getElementById(`role-${r}`);
+                if (btn) {
+                    btn.className = 'flex-1 py-4 rounded-xl border-2 ' + (role === r ? 'border-sky-500 bg-sky-500/10' : 'border-slate-700 bg-slate-800/50');
+                }
+            });
+            if (clearInputs) {
+                document.getElementById('login-id').value = '';
+                document.getElementById('login-pass').value = '';
+            }
+            document.getElementById('login-error').classList.add('hidden');
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') handleLogin();
+        }
+
+        function handleLogin() {
+            const id = document.getElementById('login-id').value.trim();
+            const pass = document.getElementById('login-pass').value.trim();
+            const error = document.getElementById('login-error');
+
+            if (!id || !pass) {
+                error.innerText = "Please enter both ID and Password.";
+                error.classList.remove('hidden');
+                return;
+            }
+
+            // 1. Check Admin first
+            if (id === 'admin' && pass === 'admin123') {
+                setRole('admin');
+                showScreen('admin-screen');
+                renderAdminUsers();
+                return;
+            }
+
+            // 2. Check users array
+            const user = users.find(u => u.id === id && u.pass === pass);
+            if (user) {
+                if (user.status === 'inactive') {
+                    error.innerText = "Your account is INACTIVE. Contact admin.";
+                    error.classList.remove('hidden');
+                } else {
+                    setRole(user.role);
+                    showScreen('selection-screen');
+                }
+            } else {
+                error.innerText = "Invalid ID or Password.";
+                error.classList.remove('hidden');
+            }
+        }
+
+        function guestLogin() {
+            setRole('student');
+            showScreen('selection-screen');
+        }
+
+        function skipLogin() {
+            setRole('admin'); // Give full access
+            showScreen('selection-screen');
+        }
+
+        function debugAdminLogin() {
+            document.getElementById('login-id').value = 'admin';
+            document.getElementById('login-pass').value = 'admin123';
+            handleLogin();
+        }
+
+        // --- THEME ---
+        function toggleTheme() {
+            const isLight = document.body.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            const icon = document.getElementById('theme-icon');
+            icon.setAttribute('data-lucide', isLight ? 'moon' : 'sun');
+            icon.className = `w-5 h-5 ${isLight ? 'text-slate-900' : 'text-amber-400'}`;
+            lucide.createIcons();
+        }
+
+        function applySavedTheme() {
+            if (localStorage.getItem('theme') === 'light') toggleTheme();
+        }
+
+        // --- ADMIN LOGIC ---
+        function toggleUserStatus(userId) {
+            const user = users.find(u => u.id === userId);
+            if (user) {
+                user.status = user.status === 'active' ? 'inactive' : 'active';
+                renderAdminUsers();
+            }
+        }
+
+        function renderAdminUsers() {
+            const list = document.getElementById('admin-user-list');
+            list.innerHTML = users.map(u => `
+                <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-all">
+                    <td class="py-4">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-slate-200">${u.name}</span>
+                            <span class="text-[10px] text-slate-500 font-mono">${u.id}</span>
+                        </div>
+                    </td>
+                    <td class="py-4">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase ${u.role === 'teacher' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}">
+                            ${u.role}
+                        </span>
+                    </td>
+                    <td class="py-4 text-xs text-slate-400 font-mono">${u.lastLogin || 'Never'}</td>
+                    <td class="py-4 text-xs text-slate-400">${u.experiments || 0}</td>
+                    <td class="py-4">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-1.5 h-1.5 rounded-full ${u.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}"></div>
+                            <span class="text-[10px] font-bold uppercase ${u.status === 'active' ? 'text-emerald-400' : 'text-red-400'}">${u.status}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 text-right">
+                        <button onclick="toggleUserStatus('${u.id}')" 
+                                class="px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-all ${u.status === 'active' ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}">
+                            ${u.status === 'active' ? 'SET INACTIVE' : 'SET ACTIVE'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('active-users-count').innerText = users.filter(u => u.status === 'active').length;
+            lucide.createIcons();
+        }
+
+        // --- LAB LOGIC ---
+        function loadExperimentIntro() {
+            if (!currentExperiment) return;
+            const intro = document.getElementById('intro-screen');
+            intro.innerHTML = `
+                <div class="glass-panel p-10 rounded-3xl max-w-2xl w-full relative">
+                    <button onclick="showScreen('selection-screen')" class="absolute top-6 left-6 text-slate-400 hover:text-white flex items-center gap-2 text-xs transition-all">
+                        <i data-lucide="arrow-left" class="w-4"></i> BACK TO SELECTION
+                    </button>
+                    <h2 class="text-4xl font-bold mb-4 mt-6 text-sky-400">Exp ${currentExperiment.id}: ${currentExperiment.title}</h2>
+                    <div class="space-y-6 text-slate-300 leading-relaxed">
+                        <p><strong>Objective:</strong> ${currentExperiment.obj || 'Study specific physics laws.'}</p>
+                        <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                            <h3 class="font-bold text-white mb-2">Apparatus:</h3>
+                            <ul class="list-disc list-inside text-sm space-y-1">
+                                ${(currentExperiment.app || ['Standard Lab Kit']).map(a => `<li>${a}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <button onclick="startExperiment()" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all">
+                            START EXPERIMENT <i data-lucide="play"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function startExperiment() {
+            showScreen('lab-screen');
+            resetCircuit();
+            document.querySelector('#lab-screen h2').innerText = `Exp ${currentExperiment.id}: ${currentExperiment.title}`;
+        }
+
+        function renderExpGrid() {
+            const grid = document.getElementById('exp-grid');
+            grid.innerHTML = experiments.map(exp => `
+                <div onclick="showScreen('intro-screen', ${exp.id})" class="glass-panel p-6 rounded-2xl hover:border-sky-500 transition-all cursor-pointer group">
+                    <div class="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center mb-4 group-hover:bg-sky-500 transition-all">
+                        <i data-lucide="${exp.icon}" class="w-6 h-6 text-sky-400 group-hover:text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-1">${exp.title}</h3>
+                    <p class="text-slate-400 text-sm">${exp.desc}</p>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderToolkit() {
+            const container = document.getElementById('toolkit-items');
+            const items = currentExperiment ? toolkit.filter(t => currentExperiment.tools.includes(t.id)) : toolkit;
+            container.innerHTML = items.map(item => `
+                <div draggable="true" ondragstart="drag(event, '${item.id}')" 
+                     class="instrument-card glass-panel p-4 rounded-xl border border-slate-700/50 flex items-center gap-4">
+                    <div class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center">
+                        <i data-lucide="${item.icon}" class="w-5 h-5 text-sky-400"></i>
+                    </div>
+                    <div><p class="text-xs font-bold">${item.name}</p></div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function drag(ev, type) { ev.dataTransfer.setData("type", type); }
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drop(ev) {
+            ev.preventDefault();
+            const type = ev.dataTransfer.getData("type");
+            const activeSteps = currentExperiment?.steps || [];
+            const expectedType = activeSteps[currentStep - 1]?.id;
+            
+            if (expectedType && type !== expectedType && currentStep <= activeSteps.length - 1) {
+                alert(`Wrong order! Follow: ${activeSteps[currentStep-1].guide}`);
+                return;
+            }
+
+            const rect = document.getElementById('drop-zone').getBoundingClientRect();
+            createInstrument(type, ev.clientX - rect.left - 60, ev.clientY - rect.top - 60);
+            currentStep++;
+            updateStepGuide();
+        }
+
+        function updateStepGuide() {
+            const guide = document.getElementById('step-guide');
+            const activeSteps = currentExperiment?.steps || [];
+            const step = activeSteps[currentStep - 1];
+            if (step) guide.innerText = step.guide;
+        }
+
+        function createInstrument(type, x, y) {
+            const id = `inst-${Date.now()}`;
+            const inst = toolkit.find(t => t.id === type);
+            const div = document.createElement('div');
+            div.className = `placed-instrument glass-panel p-4 rounded-xl min-w-[160px] shadow-2xl border-t-4 border-t-sky-500`;
+            div.id = id; div.style.left = `${x}px`; div.style.top = `${y}px`; div.draggable = true;
+
+            const terminals = `
+                <div class="absolute -left-3 top-1/2 -translate-y-1/2 group">
+                    <div onclick="toggleTerminal('${id}', 'pos', event)" class="terminal-btn w-6 h-6 bg-red-600 rounded-full border-2 border-slate-900 shadow-lg flex items-center justify-center text-[10px] font-bold text-white cursor-pointer hover:scale-125 transition-all">+</div>
+                </div>
+                <div class="absolute -right-3 top-1/2 -translate-y-1/2 group">
+                    <div onclick="toggleTerminal('${id}', 'neg', event)" class="terminal-btn w-6 h-6 bg-slate-600 rounded-full border-2 border-slate-900 shadow-lg flex items-center justify-center text-[10px] font-bold text-white cursor-pointer hover:scale-125 transition-all">-</div>
+                </div>
+            `;
+
+            let ui = '';
+            if (type === 'rheostat') {
+                ui = `<div class="mt-3"><div class="flex items-center gap-2 mb-1">
+                    <button onclick="adjustValue('rheostat', -10, '${id}')" class="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs hover:bg-slate-700">-</button>
+                    <input type="range" id="slider-${id}" min="800" max="1000" value="800" step="10" class="flex-1 accent-sky-500" oninput="updateRheostat(this.value, '${id}')">
+                    <button onclick="adjustValue('rheostat', 10, '${id}')" class="w-6 h-6 bg-slate-800 rounded flex items-center justify-center text-xs hover:bg-slate-700">+</button>
+                </div><div class="flex justify-between text-[8px] text-slate-500"><span id="label-${id}">800Ω</span></div></div>`;
+            } else if (type === 'battery') {
+                ui = `<div class="mt-3 flex items-center justify-between gap-2">
+                    <button onclick="adjustValue('battery', -0.5, '${id}')" class="w-5 h-5 bg-slate-800 rounded text-[10px] hover:bg-slate-700">-</button>
+                    <span id="label-${id}" class="text-xs font-mono text-sky-400">${circuitState.v_battery.toFixed(1)}V</span>
+                    <button onclick="adjustValue('battery', 0.5, '${id}')" class="w-5 h-5 bg-slate-800 rounded text-[10px] hover:bg-slate-700">+</button>
+                </div>`;
+            } else if (type === 'ammeter' || type === 'voltmeter') {
+                ui = `<div class="mt-3 text-center bg-slate-900 rounded py-2 border border-slate-700"><span id="display-${id}" class="text-xl font-mono text-sky-400">0.00</span><span class="text-[10px] text-slate-500 ml-1">${type==='ammeter'?'mA':'V'}</span></div>`;
+            } else if (type === 'key') {
+                ui = `<button onclick="toggleKey('${id}')" id="${id}-btn" class="mt-3 w-full py-2 bg-red-500/20 text-red-400 text-[10px] font-bold rounded border border-red-500/50">OPEN</button>`;
+            }
+
+            div.innerHTML = `${terminals}<button class="delete-btn" onclick="removeInstrument('${id}','${type}')">×</button><div class="flex items-center gap-3 mb-2"><i data-lucide="${inst.icon}" class="w-4 h-4 text-sky-400"></i><span class="text-[10px] font-bold uppercase">${inst.name}</span></div>${ui}`;
+            div.ondragstart = (e) => { e.dataTransfer.setData("moveId", id); e.dataTransfer.setData("offX", e.clientX - div.offsetLeft); e.dataTransfer.setData("offY", e.clientY - div.offsetTop); };
+            document.getElementById('drop-zone').appendChild(div);
+            
+            circuitState[`has${type.charAt(0).toUpperCase() + type.slice(1)}`] = true;
+            lucide.createIcons();
+            updateCircuit();
+        }
+
+        document.getElementById('drop-zone').ondragover = (e) => e.preventDefault();
+        document.getElementById('drop-zone').ondrop = (e) => {
+            const moveId = e.dataTransfer.getData("moveId");
+            if (moveId) {
+                const div = document.getElementById(moveId);
+                const rect = document.getElementById('drop-zone').getBoundingClientRect();
+                div.style.left = `${e.clientX - rect.left - e.dataTransfer.getData("offX")}px`;
+                div.style.top = `${e.clientY - rect.top - e.dataTransfer.getData("offY")}px`;
+                renderWires();
+            } else { drop(e); }
+        };
+
+        function adjustValue(type, amount, instId) {
+            console.log('adjustValue called', { type, amount, instId });
+            if (type === 'rheostat') {
+                const slider = document.getElementById(`slider-${instId}`);
+                if (slider) {
+                    const newValue = Math.max(800, Math.min(1000, parseInt(slider.value) + amount));
+                    slider.value = newValue;
+                    updateRheostat(newValue, instId);
+                }
+            } else if (type === 'battery') {
+                circuitState.v_battery = Math.max(0, Math.min(10, circuitState.v_battery + amount));
+                const label = document.getElementById(`label-${instId}`);
+                if (label) label.innerText = `${circuitState.v_battery.toFixed(1)}V`;
+                updateCircuit();
+            }
+        }
+
+        function updateRheostat(val, instId) {
+            circuitState.rheostatValue = parseInt(val);
+            const label = document.getElementById(`label-${instId}`);
+            if (label) label.innerText = `${val}Ω`;
+            const rangePercent = (val - 800) / 200;
+            circuitState.v = 0.5 + (Math.floor(rangePercent * 10) * 0.5); 
+            updateCircuit();
+        }
+
+        function toggleTerminal(instId, term, event) {
+            event.stopPropagation();
+            if (!wiringMode.active) {
+                wiringMode = { active: true, from: { instId, term } };
+                event.target.classList.add('ring-4', 'ring-sky-400');
+                document.getElementById('wiring-toast').classList.remove('hidden');
+            } else {
+                if (wiringMode.from.instId !== instId) {
+                    wires.push({ from: wiringMode.from, to: { instId, term } });
+                    renderWires();
+                }
+                document.querySelectorAll('.terminal-btn').forEach(b => b.classList.remove('ring-4', 'ring-sky-400'));
+                wiringMode = { active: false, from: null };
+                document.getElementById('wiring-toast').classList.add('hidden');
+                updateCircuit();
+            }
+        }
+
+        function renderWires() {
+            const layer = document.getElementById('wires-layer');
+            layer.innerHTML = wires.map(w => {
+                const fromEl = document.getElementById(w.from.instId);
+                const toEl = document.getElementById(w.to.instId);
+                if (!fromEl || !toEl) return '';
+                const fX = fromEl.offsetLeft + (w.from.term === 'pos' ? 0 : fromEl.offsetWidth);
+                const fY = fromEl.offsetTop + fromEl.offsetHeight / 2;
+                const tX = toEl.offsetLeft + (w.to.term === 'pos' ? 0 : toEl.offsetWidth);
+                const tY = toEl.offsetTop + toEl.offsetHeight / 2;
+                return `<line x1="${fX}" y1="${fY}" x2="${tX}" y2="${tY}" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4" />`;
+            }).join('');
+        }
+
+        function toggleKey(id) {
+            const btn = document.getElementById(`${id}-btn`);
+            circuitState.isClosed = !circuitState.isClosed;
+            btn.innerText = circuitState.isClosed ? 'CLOSED' : 'OPEN';
+            btn.className = `mt-3 w-full py-2 ${circuitState.isClosed ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'bg-red-500/20 text-red-400 border-red-500/50'} text-[10px] font-bold rounded border`;
+            updateCircuit();
+        }
+
+        function updateCircuit() {
+            const statusEl = document.getElementById('circuit-status');
+            const complete = circuitState.hasBattery && circuitState.hasKey && circuitState.hasRheostat && circuitState.hasResistor && circuitState.hasAmmeter && circuitState.hasVoltmeter;
+            
+            // Check if wires are actually connecting components (simplified check for Ohm's Law series circuit)
+            // A truly robust check would verify the graph, but for this lab, we check if there are at least 5 wires
+            // (since 6 components need 5-6 wires to close the loop)
+            const isWired = wires.length >= 5;
+
+            if (complete && circuitState.isClosed && isWired) {
+                statusEl.innerText = "Active"; statusEl.className = "text-xs font-bold text-emerald-400";
+                
+                // Physics: V = V_battery * (R_load / (R_load + R_rheostat))
+                // However, user specifically asked for: 0.5V steps in Voltmeter corresponds to 30mA change.
+                // Rheostat range 800-1000. 
+                // Let's stick to the user's requested linear mapping:
+                const rangePercent = (circuitState.rheostatValue - 800) / 200; // 0 to 1
+                // We want 0.5V steps. Max V could be 3V as per voltmeter description.
+                // 10 steps of 0.5V = 5V. Let's map 0-1 range to 0.5V - 3.0V (6 steps)
+                const v_reading = 0.5 + (Math.floor(rangePercent * 5) * 0.5); 
+                const ma = (v_reading / 0.5) * 30;
+
+                document.querySelectorAll('[id^="display-"]').forEach(el => {
+                    const instDiv = el.closest('.placed-instrument');
+                    const title = instDiv.querySelector('span').innerText;
+                    if (title.includes('AMMETER')) el.innerText = ma.toFixed(0);
+                    if (title.includes('VOLTMETER')) el.innerText = v_reading.toFixed(2);
+                });
+
+                document.getElementById('current-converted').innerText = `${ma.toFixed(0)} mA = ${(ma/1000).toFixed(3)} A`;
+                // Calculated Resistance R = V/I
+                const r_calc = v_reading / (ma / 1000);
+                document.getElementById('resistance-result').innerText = `${r_calc.toFixed(2)} Ω`;
+                updateTable(v_reading, ma);
+            } else {
+                statusEl.innerText = "Incomplete"; statusEl.className = "text-xs font-bold text-red-400";
+                document.querySelectorAll('[id^="display-"]').forEach(el => el.innerText = "0.00");
+                document.getElementById('current-converted').innerText = "0.000 A";
+                document.getElementById('resistance-result').innerText = "0.00 Ω";
+            }
+        }
+
+        function updateTable(v, ma) {
+            const step = Math.round(v * 2) / 2;
+            if (step > 0 && !observationData.find(d => d.v === step)) {
+                observationData.push({ v: step, ma: (step / 0.5) * 30, studentR: null });
+                renderTable();
+            }
+        }
+
+        function submitCalculation(idx) {
+            const val = parseFloat(document.getElementById(`r-input-${idx}`).value);
+            if (Math.abs(val - 16.67) < 0.5) {
+                observationData[idx].studentR = val; renderTable();
+                const resEl = document.getElementById('resistance-result');
+                resEl.innerText = `${val.toFixed(2)} Ω`;
+                resEl.classList.add('scale-150', 'text-white', 'bg-sky-500', 'p-2', 'rounded');
+                setTimeout(() => resEl.classList.remove('scale-150', 'text-white', 'bg-sky-500', 'p-2', 'rounded'), 1000);
+            } else { alert("Incorrect! Try R = V / I"); }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('observation-rows');
+            tbody.innerHTML = observationData.map((d, idx) => `
+                <tr class="border-b border-slate-800/50">
+                    <td class="py-2">${d.v.toFixed(1)}</td>
+                    <td class="py-2">${d.ma.toFixed(0)}</td>
+                    <td class="py-2">${d.studentR !== null ? `<span class="text-sky-400">${d.studentR.toFixed(1)}</span>` : `<input type="number" id="r-input-${idx}" class="w-12 bg-slate-900 border rounded text-[10px] p-1"><button onclick="submitCalculation(${idx})" class="bg-sky-500 text-white px-1 rounded text-[8px]">OK</button>`}</td>
+                </tr>
+            `).join('') || `<tr class="border-b border-slate-800/50"><td colspan="3" class="py-2">---</td></tr>`;
+        }
+
+        function removeInstrument(id, type) {
+            document.getElementById(id).remove();
+            wires = wires.filter(w => w.from.instId !== id && w.to.instId !== id);
+            renderWires();
+            circuitState[`has${type.charAt(0).toUpperCase() + type.slice(1)}`] = false;
+            updateCircuit();
+        }
+
+        function resetCircuit() {
+            wires = []; 
+            observationData = []; 
+            currentStep = 1; 
+            updateStepGuide();
+            circuitState = { v: 0, v_battery: 10, r: 16.67, isComplete: false, hasBattery: false, hasAmmeter: false, hasVoltmeter: false, hasResistor: false, hasRheostat: false, hasKey: false, isClosed: false, rheostatValue: 800 };
+            
+            // Clear only placed instruments, keep the SVG and table
+            const dropZone = document.getElementById('drop-zone');
+            const instruments = dropZone.querySelectorAll('.placed-instrument');
+            instruments.forEach(inst => inst.remove());
+            
+            renderWires();
+            updateCircuit(); 
+            renderTable(); 
+            lucide.createIcons();
+        }
+
+        window.onload = () => { applySavedTheme(); renderExpGrid(); renderToolkit(); lucide.createIcons(); };
+    </script>
+</body>
+</html>
